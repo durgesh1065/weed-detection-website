@@ -41,13 +41,7 @@ Frontend runs on `http://localhost:5173`.
 ## 3) Configure Environment (Optional)
 
 Backend (`backend/.env` from `.env.example`):
-- `PORT=5000`
-- `MODEL_PATH=<custom path to .pt model>`
-- `INFERENCE_CONF=0.05`
-- `INFERENCE_IMGSZ=512`
-- `INFERENCE_DEVICE=cpu`
-- `MAX_UPLOAD_MB=100`
-- `ANNOTATED_MAX_SIDE=1280` (downscales output image to speed up responses)
+- `PORT=5000` (local run)
 
 Frontend (`frontend/.env` from `.env.example`):
 - `VITE_API_BASE_URL=http://localhost:5000`
@@ -59,10 +53,13 @@ Frontend (`frontend/.env` from `.env.example`):
 - `POST /api/predict`
   - Form-data field: `image`
   - Returns top prediction + confidence + detection list.
+- `GET /api/predict`
+  - Returns usage help (`POST` required).
 
 ## Notes
 
 - Backend is Python-only (FastAPI), no Node.js backend required.
+- Model path and inference settings are hardcoded in backend for simple deployment.
 - Model is loaded once on startup for faster repeated inference.
 - Prediction response includes `annotatedImageBase64` so frontend can render tagged bounding-box output.
 - CORS is fully open (`*`) by default.

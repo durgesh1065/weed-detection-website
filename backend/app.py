@@ -1,6 +1,6 @@
 import base64
 import io
-import os
+import asyncio
 from pathlib import Path
 
 import numpy as np
@@ -8,16 +8,19 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from PIL import Image, UnidentifiedImageError
+from starlette.concurrency import run_in_threadpool
 from ultralytics import YOLO
 
 BASE_DIR = Path(__file__).resolve().parent
-MODEL_PATH = Path(os.getenv("MODEL_PATH", str(BASE_DIR / "weed_detection_model.pt"))).resolve()
-INFERENCE_CONF = float(os.getenv("INFERENCE_CONF", "0.05"))
-INFERENCE_IMGSZ = int(os.getenv("INFERENCE_IMGSZ", "512"))
-INFERENCE_DEVICE = os.getenv("INFERENCE_DEVICE", "cpu")
-MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "100"))
+MODEL_PATH = (BASE_DIR / "weed_detection_model.pt").resolve()
+INFERENCE_CONF = 0.05
+INFERENCE_IMGSZ = 384
+INFERENCE_DEVICE = "cpu"
+MAX_UPLOAD_MB = 100
 MAX_UPLOAD_BYTES = max(1, MAX_UPLOAD_MB) * 1024 * 1024
-ANNOTATED_MAX_SIDE = int(os.getenv("ANNOTATED_MAX_SIDE", "1280"))
+INPUT_MAX_SIDE = 1280
+ANNOTATED_MAX_SIDE = 960
+PREDICT_TIMEOUT_SECONDS = 45
 
 ALLOWED_EXTENSIONS = {
     ".jpg",
@@ -113,6 +116,17 @@ def _build_prediction_payload(result) -> dict:
     }
 
 
+def _run_inference(np_image_bgr: np.ndarray):
+    return _model.predict(
+        source=np_image_bgr,
+        conf=INFERENCE_CONF,
+        imgsz=INFERENCE_IMGSZ,
+        save=False,
+        verbose=False,
+        device=INFERENCE_DEVICE,
+    )
+
+
 @app.on_event("startup")
 def _startup() -> None:
     _load_model()
@@ -153,6 +167,11 @@ def health():
     }
 
 
+@app.get("/api/predict")
+def predict_get():
+    return {"success": False, "error": "Use POST /api/predict with form-data field 'image'."}
+
+
 @app.post("/api/predict")
 async def predict(image: UploadFile | None = File(None)):
     if image is None:
@@ -178,6 +197,8 @@ async def predict(image: UploadFile | None = File(None)):
 
     try:
         pil_image = Image.open(io.BytesIO(content)).convert("RGB")
+        if INPUT_MAX_SIDE > 0:
+            pil_image.thumbnail((INPUT_MAX_SIDE, INPUT_MAX_SIDE), Image.Resampling.LANCZOS)
         np_image = np.array(pil_image)
     except (UnidentifiedImageError, OSError):
         raise HTTPException(status_code=400, detail="Invalid image file.")
@@ -185,14 +206,15 @@ async def predict(image: UploadFile | None = File(None)):
     # Ultralytics expects ndarray input in BGR order.
     np_image_bgr = np_image[:, :, ::-1]
 
-    results = _model.predict(
-        source=np_image_bgr,
-        conf=INFERENCE_CONF,
-        imgsz=INFERENCE_IMGSZ,
-        save=False,
-        verbose=False,
-        device=INFERENCE_DEVICE,
-    )
+    try:
+        results = await asyncio.wait_for(
+            run_in_threadpool(_run_inference, np_image_bgr), timeout=PREDICT_TIMEOUT_SECONDS
+        )
+    except asyncio.TimeoutError:
+        raise HTTPException(
+            status_code=504, detail="Prediction timed out on server. Try a smaller image and retry."
+        )
+
     if not results:
         prediction = {
             "method": "yolo-detection",
