@@ -1,9 +1,9 @@
-# Weed Detection Website (React + Node.js + Python Inference)
+# Weed Detection Website (React + Python FastAPI Inference)
 
 This project provides:
 - React frontend (`frontend/`) for image upload and prediction display
-- Node.js Express backend (`backend/`) for upload API and inference orchestration
-- Python worker (`backend/python/worker.py`) that loads a `.pt` model once and serves predictions
+- Python FastAPI backend (`backend/app.py`) for upload API and inference
+- YOLO model weights stored at `backend/weed_detection_model.pt`
 
 ## Current Model Status
 
@@ -17,21 +17,13 @@ Backend default model path resolves automatically to:
 
 ```bash
 cd backend
-npm install
-```
-
-Install Python dependencies:
-
-```bash
-cd python
 python -m pip install -r requirements.txt
-cd ..
 ```
 
 Run backend:
 
 ```bash
-npm run dev
+uvicorn app:app --host 0.0.0.0 --port 5000
 ```
 
 Backend runs on `http://localhost:5000`.
@@ -50,12 +42,10 @@ Frontend runs on `http://localhost:5173`.
 
 Backend (`backend/.env` from `.env.example`):
 - `PORT=5000`
-- `PYTHON_BIN=python`
 - `MODEL_PATH=<custom path to .pt model>`
 - `INFERENCE_CONF=0.05`
 - `INFERENCE_IMGSZ=512`
 - `INFERENCE_DEVICE=cpu`
-- `INFERENCE_TIMEOUT_MS=45000`
 - `MAX_UPLOAD_MB=100`
 
 Frontend (`frontend/.env` from `.env.example`):
@@ -71,6 +61,20 @@ Frontend (`frontend/.env` from `.env.example`):
 
 ## Notes
 
-- Backend now uses a persistent Python worker (`backend/python/worker.py`) so the model is loaded once and reused across requests for faster response time.
+- Backend is Python-only (FastAPI), no Node.js backend required.
+- Model is loaded once on startup for faster repeated inference.
 - Prediction response includes `annotatedImageBase64` so frontend can render tagged bounding-box output.
 - CORS is fully open (`*`) by default.
+
+## Deploy (Render + Vercel)
+
+Render backend:
+- Root directory: `backend`
+- Environment: `Python`
+- Build command: `pip install -r requirements.txt`
+- Start command: `uvicorn app:app --host 0.0.0.0 --port $PORT`
+
+Vercel frontend:
+- Root directory: `frontend`
+- Framework: `Vite`
+- Env var: `VITE_API_BASE_URL=https://your-render-service.onrender.com`
