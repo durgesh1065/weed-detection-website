@@ -57,6 +57,7 @@ Backend (`backend/.env` from `.env.example`):
 - `INFERENCE_DEVICE=cpu`
 - `INFERENCE_TIMEOUT_MS=45000`
 - `MAX_UPLOAD_MB=100`
+- `CORS_ORIGIN=https://your-frontend.vercel.app` (or comma-separated origins; no trailing slash)
 
 Frontend (`frontend/.env` from `.env.example`):
 - `VITE_API_BASE_URL=http://localhost:5000`
