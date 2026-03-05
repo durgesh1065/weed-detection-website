@@ -47,6 +47,7 @@ Backend (`backend/.env` from `.env.example`):
 - `INFERENCE_IMGSZ=512`
 - `INFERENCE_DEVICE=cpu`
 - `MAX_UPLOAD_MB=100`
+- `ANNOTATED_MAX_SIDE=1280` (downscales output image to speed up responses)
 
 Frontend (`frontend/.env` from `.env.example`):
 - `VITE_API_BASE_URL=http://localhost:5000`

@@ -17,6 +17,7 @@ INFERENCE_IMGSZ = int(os.getenv("INFERENCE_IMGSZ", "512"))
 INFERENCE_DEVICE = os.getenv("INFERENCE_DEVICE", "cpu")
 MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "100"))
 MAX_UPLOAD_BYTES = max(1, MAX_UPLOAD_MB) * 1024 * 1024
+ANNOTATED_MAX_SIDE = int(os.getenv("ANNOTATED_MAX_SIDE", "1280"))
 
 ALLOWED_EXTENSIONS = {
     ".jpg",
@@ -47,8 +48,10 @@ _model_error = None
 def _encode_annotated_image(annotated_bgr: np.ndarray) -> str:
     rgb_array = annotated_bgr[:, :, ::-1]
     image = Image.fromarray(rgb_array)
+    if ANNOTATED_MAX_SIDE > 0:
+        image.thumbnail((ANNOTATED_MAX_SIDE, ANNOTATED_MAX_SIDE), Image.Resampling.LANCZOS)
     buffer = io.BytesIO()
-    image.save(buffer, format="JPEG", quality=82, optimize=True)
+    image.save(buffer, format="JPEG", quality=76, optimize=True)
     encoded = base64.b64encode(buffer.getvalue()).decode("utf-8")
     return f"data:image/jpeg;base64,{encoded}"
 
