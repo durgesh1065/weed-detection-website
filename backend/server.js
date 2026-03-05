@@ -10,9 +10,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PORT = Number(process.env.PORT || 5000);
-const DEFAULT_MODEL_PATH = path.normalize(
-  "C:/Users/DURGE/Downloads/weed detection website/weed_detection_model.pt"
-);
+const DEFAULT_MODEL_PATH = path.resolve(__dirname, "..", "weed_detection_model.pt");
 const MODEL_PATH = process.env.MODEL_PATH || DEFAULT_MODEL_PATH;
 const MAX_UPLOAD_MB = Number(process.env.MAX_UPLOAD_MB || 100);
 const MAX_UPLOAD_BYTES = Math.max(1, MAX_UPLOAD_MB) * 1024 * 1024;

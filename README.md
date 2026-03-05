@@ -10,10 +10,8 @@ This project provides:
 Your root model file exists at:
 - `weed_detection_model.pt`
 
-At the time of setup, it is `0 bytes` (empty), so real prediction will fail until you replace it with your trained model weights.
-
-Backend default model path is set directly to:
-- `C:\Users\DURGE\Downloads\weed detection website\weed_detection_model.pt`
+Backend default model path resolves automatically to:
+- `<repo-root>/weed_detection_model.pt`
 
 ## 1) Backend Setup
 
