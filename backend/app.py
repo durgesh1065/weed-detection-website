@@ -1,7 +1,10 @@
 import base64
 import io
 import asyncio
+import os
+import gc
 from pathlib import Path
+from threading import Lock
 
 import numpy as np
 from fastapi import FastAPI, File, HTTPException, UploadFile
@@ -9,17 +12,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from PIL import Image, UnidentifiedImageError
 from starlette.concurrency import run_in_threadpool
-from ultralytics import YOLO
+
+os.environ.setdefault("YOLO_CONFIG_DIR", "/tmp/Ultralytics")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
 
 BASE_DIR = Path(__file__).resolve().parent
 MODEL_PATH = (BASE_DIR / "weed_detection_model.pt").resolve()
 INFERENCE_CONF = 0.05
-INFERENCE_IMGSZ = 384
+INFERENCE_IMGSZ = 320
 INFERENCE_DEVICE = "cpu"
 MAX_UPLOAD_MB = 100
 MAX_UPLOAD_BYTES = max(1, MAX_UPLOAD_MB) * 1024 * 1024
-INPUT_MAX_SIDE = 1280
-ANNOTATED_MAX_SIDE = 960
+INPUT_MAX_SIDE = 960
+ANNOTATED_MAX_SIDE = 720
 PREDICT_TIMEOUT_SECONDS = 45
 
 ALLOWED_EXTENSIONS = {
@@ -46,6 +52,7 @@ app.add_middleware(
 
 _model = None
 _model_error = None
+_model_lock = Lock()
 
 
 def _encode_annotated_image(annotated_bgr: np.ndarray) -> str:
@@ -70,11 +77,24 @@ def _load_model() -> None:
         _model_error = f"Model file is empty: {MODEL_PATH}"
         return
     try:
+        import torch
+        from ultralytics import YOLO
+
+        torch.set_num_threads(1)
         _model = YOLO(str(MODEL_PATH))
         _model_error = None
     except Exception as exc:
         _model = None
         _model_error = f"Failed to load model: {exc}"
+
+
+def _ensure_model_loaded() -> None:
+    global _model
+    if _model is not None:
+        return
+    with _model_lock:
+        if _model is None:
+            _load_model()
 
 
 def _build_prediction_payload(result) -> dict:
@@ -127,11 +147,6 @@ def _run_inference(np_image_bgr: np.ndarray):
     )
 
 
-@app.on_event("startup")
-def _startup() -> None:
-    _load_model()
-
-
 @app.exception_handler(HTTPException)
 async def _handle_http_exception(_request, exc: HTTPException):
     return JSONResponse(status_code=exc.status_code, content={"success": False, "error": str(exc.detail)})
@@ -162,6 +177,7 @@ def health():
             "exists": exists,
             "sizeBytes": size,
             "ready": bool(exists and size > 0 and _model is not None),
+            "loaded": _model is not None,
         },
         "backend": "python-fastapi",
     }
@@ -177,6 +193,7 @@ async def predict(image: UploadFile | None = File(None)):
     if image is None:
         raise HTTPException(status_code=400, detail="Missing image file.")
 
+    _ensure_model_loaded()
     if _model is None:
         raise HTTPException(status_code=500, detail=_model_error or "Model is not ready.")
 
@@ -227,4 +244,6 @@ async def predict(image: UploadFile | None = File(None)):
     else:
         prediction = _build_prediction_payload(results[0])
 
+    del np_image_bgr
+    gc.collect()
     return {"success": True, "prediction": prediction}
