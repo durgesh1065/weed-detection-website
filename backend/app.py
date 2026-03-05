@@ -179,8 +179,11 @@ async def predict(image: UploadFile | None = File(None)):
     except (UnidentifiedImageError, OSError):
         raise HTTPException(status_code=400, detail="Invalid image file.")
 
+    # Ultralytics expects ndarray input in BGR order.
+    np_image_bgr = np_image[:, :, ::-1]
+
     results = _model.predict(
-        source=np_image,
+        source=np_image_bgr,
         conf=INFERENCE_CONF,
         imgsz=INFERENCE_IMGSZ,
         save=False,
@@ -200,4 +203,3 @@ async def predict(image: UploadFile | None = File(None)):
         prediction = _build_prediction_payload(results[0])
 
     return {"success": True, "prediction": prediction}
-
