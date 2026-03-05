@@ -10,14 +10,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PORT = Number(process.env.PORT || 5000);
-const DEFAULT_MODEL_PATH = path.resolve(__dirname, "..", "weed_detection_model.pt");
+const DEFAULT_MODEL_PATH = path.resolve(__dirname, "weed_detection_model.pt");
 const MODEL_PATH = process.env.MODEL_PATH || DEFAULT_MODEL_PATH;
 const MAX_UPLOAD_MB = Number(process.env.MAX_UPLOAD_MB || 100);
 const MAX_UPLOAD_BYTES = Math.max(1, MAX_UPLOAD_MB) * 1024 * 1024;
-const RAW_ALLOWED_ORIGINS = process.env.CORS_ORIGIN || "";
-const ALLOWED_ORIGINS = RAW_ALLOWED_ORIGINS.split(",")
-  .map((origin) => origin.trim().replace(/\/+$/, ""))
-  .filter(Boolean);
 const IMAGE_EXTENSIONS = new Set([
   ".jpg",
   ".jpeg",
@@ -32,12 +28,6 @@ const IMAGE_EXTENSIONS = new Set([
 ]);
 
 const app = express();
-
-function normalizeOrigin(origin) {
-  return String(origin || "")
-    .trim()
-    .replace(/\/+$/, "");
-}
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -60,28 +50,20 @@ const upload = multer({
 
 app.use(
   cors({
-    origin: (requestOrigin, callback) => {
-      if (!requestOrigin) {
-        callback(null, true);
-        return;
-      }
-
-      const normalizedRequestOrigin = normalizeOrigin(requestOrigin);
-      if (ALLOWED_ORIGINS.length === 0) {
-        callback(null, true);
-        return;
-      }
-
-      const allowed = ALLOWED_ORIGINS.some((allowedOrigin) => {
-        const normalizedAllowedOrigin = normalizeOrigin(allowedOrigin);
-        return normalizedAllowedOrigin === normalizedRequestOrigin;
-      });
-
-      callback(null, allowed);
-    }
+    origin: "*",
+    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"],
+    optionsSuccessStatus: 204
   })
 );
 app.use(express.json());
+
+app.get("/", (_req, res) => {
+  res.json({
+    status: "ok",
+    message: "Weed detection backend is running.",
+    endpoints: ["/api/health", "/api/predict"]
+  });
+});
 
 app.get("/api/health", async (_req, res) => {
   try {

@@ -17,7 +17,7 @@ def to_data_url(annotated_bgr):
     rgb_array = annotated_bgr[:, :, ::-1]
     image = Image.fromarray(rgb_array)
     buffer = BytesIO()
-    image.save(buffer, format="JPEG", quality=90)
+    image.save(buffer, format="JPEG", quality=82, optimize=True)
     encoded = base64.b64encode(buffer.getvalue()).decode("utf-8")
     return f"data:image/jpeg;base64,{encoded}"
 
@@ -99,7 +99,7 @@ def main():
     parser = argparse.ArgumentParser(description="Persistent weed detection inference worker.")
     parser.add_argument("--model", required=True, help="Path to YOLO .pt model")
     parser.add_argument("--conf", type=float, default=0.05, help="Detection confidence threshold")
-    parser.add_argument("--imgsz", type=int, default=640, help="Inference image size")
+    parser.add_argument("--imgsz", type=int, default=512, help="Inference image size")
     parser.add_argument("--device", default="cpu", help="Inference device (cpu or cuda id)")
     args = parser.parse_args()
 

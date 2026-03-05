@@ -3,15 +3,15 @@
 This project provides:
 - React frontend (`frontend/`) for image upload and prediction display
 - Node.js Express backend (`backend/`) for upload API and inference orchestration
-- Python inference script (`backend/python/infer.py`) that loads a `.pt` model
+- Python worker (`backend/python/worker.py`) that loads a `.pt` model once and serves predictions
 
 ## Current Model Status
 
-Your root model file exists at:
-- `weed_detection_model.pt`
+Model file is stored in backend:
+- `backend/weed_detection_model.pt`
 
 Backend default model path resolves automatically to:
-- `<repo-root>/weed_detection_model.pt`
+- `<repo-root>/backend/weed_detection_model.pt`
 
 ## 1) Backend Setup
 
@@ -53,11 +53,10 @@ Backend (`backend/.env` from `.env.example`):
 - `PYTHON_BIN=python`
 - `MODEL_PATH=<custom path to .pt model>`
 - `INFERENCE_CONF=0.05`
-- `INFERENCE_IMGSZ=640`
+- `INFERENCE_IMGSZ=512`
 - `INFERENCE_DEVICE=cpu`
 - `INFERENCE_TIMEOUT_MS=45000`
 - `MAX_UPLOAD_MB=100`
-- `CORS_ORIGIN=https://your-frontend.vercel.app` (or comma-separated origins; no trailing slash)
 
 Frontend (`frontend/.env` from `.env.example`):
 - `VITE_API_BASE_URL=http://localhost:5000`
@@ -74,3 +73,4 @@ Frontend (`frontend/.env` from `.env.example`):
 
 - Backend now uses a persistent Python worker (`backend/python/worker.py`) so the model is loaded once and reused across requests for faster response time.
 - Prediction response includes `annotatedImageBase64` so frontend can render tagged bounding-box output.
+- CORS is fully open (`*`) by default.

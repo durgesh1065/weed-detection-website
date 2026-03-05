@@ -9,7 +9,7 @@ const __dirname = path.dirname(__filename);
 const PYTHON_BIN = process.env.PYTHON_BIN || "python";
 const INFERENCE_TIMEOUT_MS = Number(process.env.INFERENCE_TIMEOUT_MS || 45000);
 const INFERENCE_CONF = process.env.INFERENCE_CONF || "0.05";
-const INFERENCE_IMGSZ = process.env.INFERENCE_IMGSZ || "640";
+const INFERENCE_IMGSZ = process.env.INFERENCE_IMGSZ || "512";
 const INFERENCE_DEVICE = process.env.INFERENCE_DEVICE || "cpu";
 
 let workerState = null;
