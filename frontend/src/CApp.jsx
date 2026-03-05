@@ -26,6 +26,7 @@ export default function CApp() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [meterPercent, setMeterPercent] = useState(0);
+  const [meterTargetPercent, setMeterTargetPercent] = useState(0);
   const meterPercentRef = useRef(0);
 
   useEffect(() => {
@@ -131,8 +132,12 @@ export default function CApp() {
   const targetPercent = clampPercent(confidenceScore * 100);
 
   useEffect(() => {
+    setMeterTargetPercent(targetPercent);
+  }, [targetPercent]);
+
+  useEffect(() => {
     const from = meterPercentRef.current;
-    const to = targetPercent;
+    const to = meterTargetPercent;
     const durationMs = 900;
     let frameId = 0;
     let startTs = 0;
@@ -156,7 +161,21 @@ export default function CApp() {
     return () => {
       cancelAnimationFrame(frameId);
     };
-  }, [targetPercent]);
+  }, [meterTargetPercent]);
+
+  function adjustMeter(delta) {
+    setMeterTargetPercent((prev) => clampPercent(prev + delta));
+  }
+
+  function onMeterRangeChange(event) {
+    const next = Number(event.target.value);
+    setMeterTargetPercent(clampPercent(next));
+  }
+
+  function onMeterInputChange(event) {
+    const next = Number(event.target.value);
+    setMeterTargetPercent(clampPercent(next));
+  }
 
   return (
     <div className="page">
@@ -191,6 +210,43 @@ export default function CApp() {
             <div className="confidence-meter-track" aria-label="Confidence score bar">
               <div className="confidence-meter-fill" style={{ width: `${meterPercent}%` }} />
             </div>
+            <div className="confidence-meter-controls">
+              <button type="button" className="meter-btn" onClick={() => adjustMeter(-5)}>
+                -5%
+              </button>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="0.1"
+                value={meterTargetPercent}
+                onChange={onMeterRangeChange}
+                aria-label="Adjust confidence percentage"
+              />
+              <button type="button" className="meter-btn" onClick={() => adjustMeter(5)}>
+                +5%
+              </button>
+            </div>
+            <div className="confidence-meter-input">
+              <label htmlFor="meter-input-number">Set %</label>
+              <input
+                id="meter-input-number"
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                value={meterTargetPercent.toFixed(2)}
+                onChange={onMeterInputChange}
+              />
+              <button
+                type="button"
+                className="meter-btn meter-btn-secondary"
+                onClick={() => setMeterTargetPercent(targetPercent)}
+              >
+                Use Model
+              </button>
+            </div>
+            <p className="meta">Model confidence: {targetPercent.toFixed(2)}%</p>
           </div>
 
           {previewUrl ? (
@@ -251,4 +307,3 @@ export default function CApp() {
     </div>
   );
 }
-
